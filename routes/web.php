@@ -24,6 +24,12 @@ Route::get('/api/health', function () {
     return response()->json(['ok' => true, 'time' => now()->toIso8601String()]);
 });
 
+// TEMP: Link existing users to businesses via pivot (run after migrations)
+Route::get('/api/link-owners', function () {
+    \Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
+    return response(\Artisan::output())->header('Content-Type', 'text/plain');
+});
+
 
 
 /*
