@@ -24,6 +24,13 @@ Route::get('/api/health', function () {
     return response()->json(['ok' => true, 'time' => now()->toIso8601String()]);
 });
 
+// Seed database (no auth, for production seeding)
+Route::get('/api/seed', function () {
+    \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
+    return response('<pre>' . htmlspecialchars(\Illuminate\Support\Facades\Artisan::output()) . '</pre>')
+        ->header('Content-Type', 'text/html');
+});
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated Dashboard Routes
