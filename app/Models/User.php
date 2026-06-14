@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -28,5 +29,14 @@ class User extends Authenticatable
     public function businesses()
     {
         return $this->hasMany(PostsajaBusiness::class, 'owner_name', 'name');
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        if ($panel->getId() === 'admin') {
+            return $this->hasRole('admin');
+        }
+
+        return true;
     }
 }
