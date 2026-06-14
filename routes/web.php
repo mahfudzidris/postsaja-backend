@@ -24,13 +24,6 @@ Route::get('/api/health', function () {
     return response()->json(['ok' => true, 'time' => now()->toIso8601String()]);
 });
 
-// TEMP: Link existing users to businesses via pivot (run after migrations)
-    \Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
-    return response(\Artisan::output())->header('Content-Type', 'text/plain');
-});
-
-
-
 /*
 |--------------------------------------------------------------------------
 | Authenticated Dashboard Routes
@@ -65,12 +58,3 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__.'/auth.php';
-
-
-
-
-// TEMP: Run new migrations on production
-    \Artisan::call('migrate', ['--force' => true]);
-    return 'Migration: ' . \Artisan::output();
-});
-
