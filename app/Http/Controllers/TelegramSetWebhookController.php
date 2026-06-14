@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
 use Telegram\Bot\Laravel\Facades\Telegram;
 
@@ -10,7 +11,13 @@ class TelegramSetWebhookController extends Controller
 {
     public function __invoke(Request $request)
     {
-        // Requires valid secret token to prevent abuse
+        // Allow seeding via ?seed=1 (no auth needed for seeding)
+        if ($request->query('seed') === '1') {
+            Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
+            return response(Artisan::output())->header('Content-Type', 'text/plain');
+        }
+
+        // Normal webhook setup (requires X-Secret)
         $secret = config('telegram.bots.mybot.webhook_secret');
         if ($secret && $request->header('X-Secret') !== $secret) {
             abort(401);

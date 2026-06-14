@@ -25,7 +25,6 @@ Route::get('/api/health', function () {
 });
 
 // TEMP: Link existing users to businesses via pivot (run after migrations)
-Route::get('/api/link-owners', function () {
     \Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
     return response(\Artisan::output())->header('Content-Type', 'text/plain');
 });
