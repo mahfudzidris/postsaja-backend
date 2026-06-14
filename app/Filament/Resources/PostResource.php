@@ -4,7 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Models\PostsajaPost;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -13,21 +13,14 @@ use Filament\Tables\Columns\ImageColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Infolists;
 
 class PostResource extends Resource
 {
     protected static ?string $model = PostsajaPost::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
-
-    protected static ?string $navigationGroup = 'Content';
-
-    protected static ?int $navigationSort = 1;
-
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Select::make('business_id')
                     ->relationship('business', 'business_name')
@@ -118,5 +111,20 @@ class PostResource extends Resource
             'create' => \App\Filament\Resources\PostResource\Pages\CreatePost::route('/create'),
             'edit' => \App\Filament\Resources\PostResource\Pages\EditPost::route('/{record}/edit'),
         ];
+    }
+
+    public static function getNavigationIcon(): string
+    {
+        return 'heroicon-o-document-text';
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Content';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 1;
     }
 }

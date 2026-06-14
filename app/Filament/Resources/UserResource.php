@@ -4,7 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Models\User;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -17,15 +17,9 @@ class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user-circle';
-
-    protected static ?string $navigationGroup = 'Settings';
-
-    protected static ?int $navigationSort = 1;
-
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 TextInput::make('name')
                     ->required()
@@ -98,5 +92,20 @@ class UserResource extends Resource
             'create' => \App\Filament\Resources\UserResource\Pages\CreateUser::route('/create'),
             'edit' => \App\Filament\Resources\UserResource\Pages\EditUser::route('/{record}/edit'),
         ];
+    }
+
+    public static function getNavigationIcon(): string
+    {
+        return 'heroicon-o-user-circle';
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Settings';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 1;
     }
 }

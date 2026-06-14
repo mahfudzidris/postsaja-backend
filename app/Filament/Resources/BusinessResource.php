@@ -4,28 +4,21 @@ namespace App\Filament\Resources;
 
 use App\Models\PostsajaBusiness;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Infolists\Components\Section;
 
 class BusinessResource extends Resource
 {
     protected static ?string $model = PostsajaBusiness::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-building-storefront';
-
-    protected static ?string $navigationGroup = 'Business';
-
-    protected static ?int $navigationSort = 1;
-
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 TextInput::make('business_name')
                     ->required()
@@ -88,9 +81,7 @@ class BusinessResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getPages(): array
@@ -100,5 +91,25 @@ class BusinessResource extends Resource
             'create' => \App\Filament\Resources\BusinessResource\Pages\CreateBusiness::route('/create'),
             'edit' => \App\Filament\Resources\BusinessResource\Pages\EditBusiness::route('/{record}/edit'),
         ];
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return 'Businesses';
+    }
+
+    public static function getNavigationIcon(): string
+    {
+        return 'heroicon-o-building-storefront';
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Business';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 1;
     }
 }

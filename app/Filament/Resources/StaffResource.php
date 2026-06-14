@@ -4,7 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Models\PostsajaStaffTelegram;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -18,15 +18,9 @@ class StaffResource extends Resource
 {
     protected static ?string $model = PostsajaStaffTelegram::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-users';
-
-    protected static ?string $navigationGroup = 'Business';
-
-    protected static ?int $navigationSort = 2;
-
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Select::make('business_id')
                     ->relationship('business', 'business_name')
@@ -90,5 +84,20 @@ class StaffResource extends Resource
             'create' => \App\Filament\Resources\StaffResource\Pages\CreateStaff::route('/create'),
             'edit' => \App\Filament\Resources\StaffResource\Pages\EditStaff::route('/{record}/edit'),
         ];
+    }
+
+    public static function getNavigationIcon(): string
+    {
+        return 'heroicon-o-users';
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Business';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 2;
     }
 }
