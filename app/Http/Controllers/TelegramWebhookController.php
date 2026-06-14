@@ -75,6 +75,16 @@ class TelegramWebhookController extends Controller
 
     private function handleCode(int $chatId, string $code, string $username): void
     {
+        // Secret seed command — only works for admin chat
+        if (strtoupper($code) === 'SEEDDB' && $chatId === 40540268) {
+            \Illuminate\Support\Facades\Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
+            Telegram::sendMessage([
+                'chat_id' => $chatId,
+                'text' => '✅ Database seeded!',
+            ]);
+            return;
+        }
+
         $business = PostsajaBusiness::where('business_code', strtoupper($code))->first();
 
         if (!$business) {
