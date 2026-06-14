@@ -11,7 +11,7 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-        <link rel="stylesheet" href="{{ asset('build/assets/app-VV1dNRmu.css') }}">
+        @vite(['resources/css/app.css'])
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen bg-background">
@@ -30,6 +30,6 @@
             </main>
         </div>
 
-        <script src="{{ asset('build/assets/app-DO2nEFzp.js') }}"></script>
+        @vite(['resources/js/app.js'])
     </body>
 </html>

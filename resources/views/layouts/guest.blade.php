@@ -11,12 +11,12 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-        <link rel="stylesheet" href="{{ asset('build/assets/app-VV1dNRmu.css') }}">
+        @vite(['resources/css/app.css'])
     </head>
     <body class="font-sans antialiased">
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-background">
             <div class="mb-8 text-center">
-                <a href="/" class="text-2xl font-extrabold">
+                <a href="{{ config('app.url', '/') }}" class="text-2xl font-extrabold">
                     <span class="bg-gradient-brand bg-clip-text text-transparent">PostSaja</span>
                 </a>
                 <p class="text-sm text-muted mt-1">Marketing untuk yang tak sempat marketing</p>

@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('build/assets/app-VV1dNRmu.css') }}">
+    @vite(['resources/css/app.css'])
     <style>
         :root {
             --bg: #F8FAFC;
@@ -76,7 +76,7 @@
 </head>
 <body>
     <nav>
-        <a href="/" class="logo"><span>PostSaja</span></a>
+        <a href="https://postsaja.com" class="logo"><span>PostSaja</span></a>
         <div class="nav-links">
             <a href="#features">Ciri</a>
             <a href="#cta">Harga</a>
