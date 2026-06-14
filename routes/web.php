@@ -61,22 +61,32 @@ require __DIR__.'/auth.php';
 
 // TEMP: Seed admin users for testing
 Route::get('/_seed', function () {
-    \Spatie\Permission\Models\Role::findOrCreate('admin');
-    \Spatie\Permission\Models\Role::findOrCreate('owner');
-    \Spatie\Permission\Models\Role::findOrCreate('staff');
-    
-    \Illuminate\Support\Facades\Hash::make('password');
-    
-    \App\Models\User::updateOrCreate(
-        ['email' => 'admin@postsaja.com'],
-        ['name' => 'Mahfudz Idris', 'password' => bcrypt('password')]
-    )->assignRole('admin');
-    
-    \App\Models\User::updateOrCreate(
-        ['email' => 'owner@postsaja.com'],
-        ['name' => 'Demo Owner', 'password' => bcrypt('password')]
-    )->assignRole('owner');
-    
-    return 'Seed OK: admin@postsaja.com / owner@postsaja.com (password: password)';
+    try {
+        \Spatie\Permission\Models\Role::findOrCreate('admin');
+        \Spatie\Permission\Models\Role::findOrCreate('owner');
+        \Spatie\Permission\Models\Role::findOrCreate('staff');
+        
+        \App\Models\User::updateOrCreate(
+            ['email' => 'admin@postsaja.com'],
+            ['name' => 'Mahfudz Idris', 'password' => '']
+        );
+        $admin = \App\Models\User::where('email', 'admin@postsaja.com')->first();
+        $admin->password = bcrypt('password');
+        $admin->save();
+        $admin->assignRole('admin');
+        
+        \App\Models\User::updateOrCreate(
+            ['email' => 'owner@postsaja.com'],
+            ['name' => 'Demo Owner', 'password' => '']
+        );
+        $owner = \App\Models\User::where('email', 'owner@postsaja.com')->first();
+        $owner->password = bcrypt('password');
+        $owner->save();
+        $owner->assignRole('owner');
+        
+        return 'Seed OK: admin@postsaja.com / owner@postsaja.com (password: password)';
+    } catch (\Throwable \$e) {
+        return 'Error: ' . \$e->getMessage() . '\n' . \$e->getTraceAsString();
+    }
 });
 
