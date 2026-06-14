@@ -11,13 +11,14 @@ class TelegramSetWebhookController extends Controller
 {
     public function __invoke(Request $request)
     {
-        // Allow seeding via ?seed=1 (no auth needed for seeding)
-        if ($request->query('seed') === '1') {
+        // Seed via query param
+        if (isset($_GET['seed']) && $_GET['seed'] === '1') {
+            Log::info('Seed triggered via _GET');
             Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
-            return response(Artisan::output())->header('Content-Type', 'text/plain');
+            return response('<pre>' . htmlspecialchars(Artisan::output()) . '</pre>')
+                ->header('Content-Type', 'text/html');
         }
 
-        // Normal webhook setup (requires X-Secret)
         $secret = config('telegram.bots.mybot.webhook_secret');
         if ($secret && $request->header('X-Secret') !== $secret) {
             abort(401);
