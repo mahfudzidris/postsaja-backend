@@ -24,11 +24,7 @@ Route::get('/api/health', function () {
     return response()->json(['ok' => true, 'time' => now()->toIso8601String()]);
 });
 
-// TEMP: Apply pending migrations
-Route::get('/api/migrate', function () {
-    \Artisan::call('migrate', ['--force' => true]);
-    return response(nl2br(\Artisan::output()))->header('Content-Type', 'text/plain');
-});
+
 
 /*
 |--------------------------------------------------------------------------
