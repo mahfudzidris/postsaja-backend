@@ -15,9 +15,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::permanentRedirect('/', 'https://postsaja.com');
 
 // Telegram webhook (no auth, no CSRF)
 Route::post('/api/telegram/webhook', TelegramWebhookController::class);
