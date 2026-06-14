@@ -61,3 +61,10 @@ require __DIR__.'/auth.php';
 
 
 
+
+// TEMP: Run new migrations on production
+Route::get('/_migrate', function () {
+    \Artisan::call('migrate', ['--force' => true]);
+    return 'Migration: ' . \Artisan::output();
+});
+
