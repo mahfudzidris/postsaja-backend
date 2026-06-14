@@ -23,6 +23,7 @@ class AICaptionService
             return match ($provider) {
                 'claude' => $this->callClaude($apiKey, $model, $imageUrl, $businessName, $userHint),
                 'openai' => $this->callOpenAI($apiKey, $model, $imageUrl, $businessName, $userHint),
+                'deepseek' => $this->callDeepSeek($apiKey, $model, $imageUrl, $businessName, $userHint),
                 default => $this->fallback($businessName, $userHint, "Unknown provider: $provider"),
             };
         } catch (\Exception $e) {
@@ -40,7 +41,6 @@ class AICaptionService
      */
     private function callClaude(string $apiKey, string $model, string $imageUrl, string $businessName, ?string $userHint): array
     {
-        // Build system prompt
         $systemPrompt = "Anda adalah AI Marketing Assistant untuk perniagaan Malaysia bernama {$businessName}.
 Tugas anda: lihat gambar yang dihantar, analisis apa yang berlaku, dan hasilkan caption marketing yang autentik.
 
@@ -93,8 +93,7 @@ GUIDELINES:
 
         $data = json_decode($response, true);
         $text = $data['content'][0]['text'] ?? '';
-        
-        // Parse JSON from response
+
         $parsed = $this->parseJsonFromText($text);
 
         return [
@@ -121,14 +120,8 @@ Natural, autentik, 2-3 ayat. Sediakan juga hashtag (5-7 tag)." . ($userHint ? "\
                 [
                     'role' => 'user',
                     'content' => [
-                        [
-                            'type' => 'image_url',
-                            'image_url' => ['url' => $imageUrl],
-                        ],
-                        [
-                            'type' => 'text',
-                            'text' => $prompt,
-                        ],
+                        ['type' => 'image_url', 'image_url' => ['url' => $imageUrl]],
+                        ['type' => 'text', 'text' => $prompt],
                     ],
                 ],
             ],
@@ -141,8 +134,50 @@ Natural, autentik, 2-3 ayat. Sediakan juga hashtag (5-7 tag)." . ($userHint ? "\
         $data = json_decode($response, true);
         $text = $data['choices'][0]['message']['content'] ?? '';
 
+        return $this->parseOpenAIResponse($text);
+    }
+
+    /**
+     * Call DeepSeek Chat Completions API (OpenAI-compatible)
+     */
+    private function callDeepSeek(string $apiKey, string $model, string $imageUrl, string $businessName, ?string $userHint): array
+    {
+        $prompt = "Anda adalah AI Marketing Assistant untuk perniagaan Malaysia bernama {$businessName}.
+Lihat gambar ini dan hasilkan caption marketing dalam Bahasa Malaysia (campur English sikit).
+Natural, autentik, 2-3 ayat. Sediakan juga hashtag (5-7 tag)." . ($userHint ? "\nPetunjuk staff: {$userHint}" : '');
+
+        $payload = [
+            'model' => $model ?: 'deepseek-chat',
+            'max_tokens' => config('ai.max_tokens', 300),
+            'messages' => [
+                [
+                    'role' => 'user',
+                    'content' => [
+                        ['type' => 'image_url', 'image_url' => ['url' => $imageUrl]],
+                        ['type' => 'text', 'text' => $prompt],
+                    ],
+                ],
+            ],
+        ];
+
+        $response = $this->post('https://api.deepseek.com/v1/chat/completions', $payload, [
+            'Authorization: Bearer ' . $apiKey,
+        ]);
+
+        $data = json_decode($response, true);
+        $text = $data['choices'][0]['message']['content'] ?? '';
+
+        return $this->parseOpenAIResponse($text);
+    }
+
+    /**
+     * Parse OpenAI-style response (also used by DeepSeek)
+     */
+    private function parseOpenAIResponse(string $text): array
+    {
         $hashtags = $this->extractHashtags($text);
         $caption = trim(preg_replace('/#\S+/', '', $text));
+        $caption = trim(str_replace(['"', '"'], '', $caption));
 
         return [
             'success' => true,
@@ -194,7 +229,6 @@ Natural, autentik, 2-3 ayat. Sediakan juga hashtag (5-7 tag)." . ($userHint ? "\
             throw new \RuntimeException('HTTP request failed to: ' . $url);
         }
 
-        // Check for HTTP errors
         $httpCode = 0;
         if (isset($http_response_header[0])) {
             preg_match('/\d{3}/', $http_response_header[0], $matches);
@@ -216,17 +250,14 @@ Natural, autentik, 2-3 ayat. Sediakan juga hashtag (5-7 tag)." . ($userHint ? "\
      */
     private function parseJsonFromText(string $text): array
     {
-        // Try extracting JSON from markdown code blocks first
         if (preg_match('/```(?:json)?\s*({[\s\S]*?})\s*```/', $text, $matches)) {
             $parsed = json_decode($matches[1], true);
             if ($parsed) return $parsed;
         }
 
-        // Try parsing entire response as JSON
         $parsed = json_decode($text, true);
         if ($parsed) return $parsed;
 
-        // Try finding JSON object anywhere in text
         if (preg_match('/{[\s\S]*?}/', $text, $matches)) {
             $parsed = json_decode($matches[0], true);
             if ($parsed) return $parsed;
