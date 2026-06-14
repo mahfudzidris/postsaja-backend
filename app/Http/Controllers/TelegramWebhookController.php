@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PostsajaBusiness;
 use App\Models\PostsajaStaffTelegram;
 use App\Models\PostsajaPost;
+use App\Services\AICaptionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Telegram\Bot\Laravel\Facades\Telegram;
@@ -118,7 +119,8 @@ class TelegramWebhookController extends Controller
         // Get file path from Telegram
         $response = Telegram::getFile(['file_id' => $fileId]);
         $filePath = $response->getFilePath();
-        $fullUrl = "https://api.telegram.org/file/bot" . config('telegram.bots.mybot.token') . "/" . $filePath;
+        $token = config('telegram.bots.mybot.token');
+        $fullUrl = "https://api.telegram.org/file/bot{$token}/{$filePath}";
 
         // Get staff business
         $staff = PostsajaStaffTelegram::where('telegram_chat_id', $chatId)
@@ -135,19 +137,29 @@ class TelegramWebhookController extends Controller
             'parse_mode' => 'Markdown',
         ]);
 
-        // Simulate AI processing
-        sleep(2);
+        // ─── Generate AI Caption ───
+        $ai = app(AICaptionService::class);
+        $result = $ai->generate($fullUrl, $businessName, $caption ?: null);
 
-        $userCaption = $caption ?: 'Servis kenderaan';
-        $mockCaption = "✅ *" . ucfirst($userCaption) . "* — Siap!\n\n"
-            . "✨ *AI Caption:*\n"
-            . "\"Servis berkualiti dari {$businessName}. Kepuasan pelanggan keutamaan kami.\"\n\n"
-            . "#servis #berkualiti #{$businessName} #SME #Malaysia #postSaja\n\n"
+        $aiCaption = $result['caption'];
+        $hashtags = $result['hashtags'];
+        $platforms = $result['platforms'] ?? ['google_business', 'facebook', 'instagram'];
+
+        $platformText = collect($platforms)->map(fn($p) => [
+            'google_business' => '📰 Google Business',
+            'facebook' => '📘 Facebook',
+            'instagram' => '📷 Instagram',
+            'whatsapp' => '💬 WhatsApp Status',
+        ][$p] ?? $p)->join("\n");
+
+        $aiLabel = $result['success'] ? '🤖 *AI Caption:*' : '📝 *Caption:*';
+
+        $replyText = "✅ *Gambar diproses!*\n\n"
+            . "{$aiLabel}\n"
+            . "\"{$aiCaption}\"\n\n"
+            . $hashtags . "\n\n"
             . "📤 *Posting ke:*\n"
-            . "✅ Google Business\n"
-            . "✅ Facebook\n"
-            . "✅ Instagram\n"
-            . "✅ WhatsApp Status\n\n"
+            . $platformText . "\n\n"
             . "📊 *Anggaran capaian:*\n"
             . "👁️ 89 views · 👍 15 likes · 💬 2 respon\n\n"
             . "🚀 Post akan naik dalam masa 5 minit!";
@@ -155,7 +167,7 @@ class TelegramWebhookController extends Controller
         Telegram::sendPhoto([
             'chat_id' => $chatId,
             'photo' => $fullUrl,
-            'caption' => $mockCaption,
+            'caption' => $replyText,
             'parse_mode' => 'Markdown',
         ]);
 
@@ -165,7 +177,7 @@ class TelegramWebhookController extends Controller
                 'business_id' => $staff->business_id,
                 'staff_chat_id' => $chatId,
                 'image_url' => $fullUrl,
-                'ai_caption' => $userCaption,
+                'ai_caption' => $aiCaption,
                 'status' => 'processing',
             ]);
         }
