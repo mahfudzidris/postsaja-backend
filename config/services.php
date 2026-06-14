@@ -35,4 +35,10 @@ return [
         'api_key' => env('WHATSAPP_API_KEY'),
         'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
     ],
+
+    // GitHub Issue Tracker (for auto error reporting)
+    'github' => [
+        'token' => env('GITHUB_TOKEN'),
+        'repo' => env('GITHUB_REPO', 'mahfudzidris/postsaja-backend'),
+    ],
 ];

@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\GitHubIssueReporter;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,9 +17,30 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'api/telegram/webhook',
         ]);
+
+        // Add Spatie permission middleware aliases
+        $middleware->alias([
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        // Auto-report 500 errors to GitHub Issues
+        $exceptions->reportable(function (\Throwable $e) {
+            if (app()->isProduction() && app()->bound('gitHubReporter')) {
+                $reporter = app(GitHubIssueReporter::class);
+                $url = $reporter->report($e, [
+                    'url' => request()?->fullUrl(),
+                    'method' => request()?->method(),
+                    'ip' => request()?->ip(),
+                ]);
+                if ($url) {
+                    logger()->warning('GitHub issue auto-created', ['url' => $url]);
+                }
+            }
+        })->stop(false);
     })->create();
