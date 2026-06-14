@@ -19,7 +19,7 @@ class PostsajaBusiness extends Model
 
     public function staff()
     {
-        $this->hasMany(PostsajaStaffTelegram::class, 'business_id');
+        return $this->hasMany(PostsajaStaffTelegram::class, 'business_id');
     }
 
     public function posts()
