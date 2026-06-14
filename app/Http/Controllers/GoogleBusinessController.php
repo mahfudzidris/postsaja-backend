@@ -14,7 +14,7 @@ class GoogleBusinessController extends Controller
         $user = Auth::user();
         $businesses = PostsajaBusiness::where('owner_name', $user->name)->get();
 
-        return view('google-business', compact('businesses'));
+        return view('google-business.index', compact('businesses'));
     }
 
     /**

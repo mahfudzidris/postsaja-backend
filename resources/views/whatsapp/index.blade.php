@@ -1,25 +1,28 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            💬 WhatsApp Status
-        </h2>
+        <div>
+            <h2 class="text-lg font-bold text-text-main">💬 WhatsApp Status</h2>
+            <p class="text-sm text-muted">Auto-post gambar ke WhatsApp Status</p>
+        </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+    <div class="py-8">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
             @if(session('success'))
-                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">{{ session('success') }}</div>
+                <div class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl mb-6 text-sm">{{ session('success') }}</div>
             @endif
             @if(session('error'))
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{{ session('error') }}</div>
+                <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm">{{ session('error') }}</div>
             @endif
 
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
-                <h3 class="text-lg font-semibold mb-2">📖 Cara Setup</h3>
-                <ol class="list-decimal list-inside text-sm text-gray-600 space-y-1">
-                    <li>Daftar dekat <a href="https://www.360dialog.io" target="_blank" class="text-blue-600">360Dialog</a> / <a href="https://www.wati.io" target="_blank" class="text-blue-600">WATI</a> / <a href="https://www.twilio.com" target="_blank" class="text-blue-600">Twilio</a></li>
-                    <li>Dapatkan API Key & Phone Number ID</li>
-                    <li>Masukkan dekat bawah untuk connect</li>
+            {{-- Guide card --}}
+            <div class="bg-white border border-border rounded-xl p-6 mb-6">
+                <h3 class="font-bold text-text-main mb-2">📖 Cara Setup WhatsApp Status</h3>
+                <ol class="list-decimal list-inside text-sm text-muted space-y-1">
+                    <li>Daftar dekat <a href="https://www.360dialog.io" target="_blank" class="text-primary-600 hover:underline">360Dialog</a> / <a href="https://www.wati.io" target="_blank" class="text-primary-600 hover:underline">WATI</a> / <a href="https://www.twilio.com" target="_blank" class="text-primary-600 hover:underline">Twilio</a></li>
+                    <li>Dapatkan API Key & Phone Number ID daripada provider</li>
+                    <li>Masukkan details dekat bawah untuk connect</li>
                     <li>Siap — auto-post ke WhatsApp Status bila staff upload gambar</li>
                 </ol>
             </div>
@@ -30,35 +33,38 @@
                     $isConnected = isset($waConfig['provider']);
                 @endphp
 
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 mb-4">
+                <div class="bg-white border border-border rounded-xl p-6 mb-4">
                     <div class="flex items-center justify-between mb-4">
                         <div>
-                            <h3 class="text-lg font-semibold">{{ $business->business_name }}</h3>
-                            <p class="text-sm text-gray-500">Code: {{ $business->business_code }}</p>
+                            <h3 class="font-bold text-text-main">{{ $business->business_name }}</h3>
+                            <p class="text-sm text-muted">Code: <code class="bg-primary-50 px-1.5 py-0.5 rounded font-mono text-primary-600">{{ $business->business_code }}</code></p>
                         </div>
                         @if($isConnected)
-                            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">✅ Connected ({{ $waConfig['provider'] }})</span>
+                            <span class="inline-flex items-center px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium">
+                                ✅ {{ $waConfig['provider'] }}
+                            </span>
                         @endif
                     </div>
 
                     @if($isConnected)
-                        <div class="border-t pt-4">
-                            <p class="text-sm text-gray-600">Provider: <strong>{{ $waConfig['provider'] }}</strong></p>
-                            <p class="text-sm text-gray-600">Phone ID: <strong>{{ $waConfig['phone_number_id'] }}</strong></p>
+                        <div class="border-t border-border pt-4 space-y-1">
+                            <p class="text-sm text-muted">Provider: <span class="font-medium text-text-main">{{ $waConfig['provider'] }}</span></p>
+                            <p class="text-sm text-muted">Phone ID: <span class="font-medium text-text-main">{{ $waConfig['phone_number_id'] }}</span></p>
+                            <p class="text-sm text-emerald-600">✅ Auto-post aktif</p>
                             <form method="POST" action="{{ route('whatsapp.disconnect') }}" class="mt-2">
                                 @csrf
                                 <input type="hidden" name="business_id" value="{{ $business->id }}">
-                                <button type="submit" class="text-sm text-red-600 hover:text-red-800">Disconnect</button>
+                                <button type="submit" class="text-sm text-danger-500 hover:text-red-700">Disconnect</button>
                             </form>
                         </div>
                     @else
-                        <form method="POST" action="{{ route('whatsapp.connect') }}" class="border-t pt-4 space-y-3">
+                        <form method="POST" action="{{ route('whatsapp.connect') }}" class="border-t border-border pt-4 space-y-3">
                             @csrf
                             <input type="hidden" name="business_id" value="{{ $business->id }}">
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Provider</label>
-                                <select name="provider" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200">
+                                <label class="block text-sm font-medium text-text-main">Provider</label>
+                                <select name="provider" class="mt-1 block w-full rounded-xl border-border focus:border-primary-500 focus:ring-primary-500">
                                     <option value="360dialog">360Dialog</option>
                                     <option value="wati">WATI</option>
                                     <option value="twilio">Twilio</option>
@@ -66,16 +72,16 @@
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">API Key</label>
-                                <input type="text" name="api_key" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200" placeholder="API Key / Token">
+                                <label class="block text-sm font-medium text-text-main">API Key</label>
+                                <input type="text" name="api_key" class="mt-1 block w-full rounded-xl border-border focus:border-primary-500 focus:ring-primary-500" placeholder="API Key / Token">
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700">Phone Number ID</label>
-                                <input type="text" name="phone_number_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200" placeholder="e.g. 60123456789">
+                                <label class="block text-sm font-medium text-text-main">Phone Number ID</label>
+                                <input type="text" name="phone_number_id" class="mt-1 block w-full rounded-xl border-border focus:border-primary-500 focus:ring-primary-500" placeholder="e.g. 60123456789">
                             </div>
 
-                            <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                            <button type="submit" class="px-6 py-2.5 bg-gradient-brand text-white font-semibold rounded-xl hover:opacity-90 transition text-sm">
                                 🔗 Connect WhatsApp
                             </button>
                         </form>
@@ -84,8 +90,9 @@
             @endforeach
 
             @if($businesses->isEmpty())
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                    <p class="text-gray-500">Belum ada business. Register dulu.</p>
+                <div class="bg-white border border-border rounded-xl p-6 text-center">
+                    <p class="text-3xl mb-2">💬</p>
+                    <p class="text-muted">Belum ada business. Daftar dulu.</p>
                 </div>
             @endif
         </div>

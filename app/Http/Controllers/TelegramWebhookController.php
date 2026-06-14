@@ -171,15 +171,26 @@ class TelegramWebhookController extends Controller
             'parse_mode' => 'Markdown',
         ]);
 
-        // Log post
+        // Log post & trigger auto-post to WhatsApp Status
         if ($staff && $staff->business_id) {
-            PostsajaPost::create([
+            $post = PostsajaPost::create([
                 'business_id' => $staff->business_id,
                 'staff_chat_id' => $chatId,
                 'image_url' => $fullUrl,
                 'ai_caption' => $aiCaption,
                 'status' => 'processing',
             ]);
+
+            // Auto-post to WhatsApp Status if connected
+            try {
+                WhatsAppController::sendStatusUpdate($staff->business_id, $fullUrl, $aiCaption);
+                $post->update(['status' => 'posted']);
+            } catch (\Exception $e) {
+                Log::warning('WhatsApp auto-post failed (maybe not connected)', [
+                    'business_id' => $staff->business_id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 }
