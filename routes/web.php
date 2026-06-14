@@ -58,3 +58,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// TEMP: Seed admin users for testing
+Route::get('/_seed', function () {
+    $exitCode = Artisan::call('db:seed', ['--class' => 'DatabaseSeeder', '--force' => true]);
+    return 'Seed run: ' . $exitCode . ' | ' . Artisan::output();
+});
+
