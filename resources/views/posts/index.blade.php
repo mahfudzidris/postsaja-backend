@@ -26,6 +26,7 @@
                                     <th class="text-left py-3 text-muted font-medium">AI Caption</th>
                                     <th class="text-left py-3 text-muted font-medium">Status</th>
                                     <th class="text-left py-3 text-muted font-medium">Date</th>
+                                    <th class="text-left py-3 text-muted font-medium">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -46,6 +47,7 @@
                                             $statusClasses = [
                                                 'posted' => 'bg-emerald-50 text-emerald-700',
                                                 'processing' => 'bg-amber-50 text-amber-700',
+                                                'pending' => 'bg-amber-50 text-amber-600',
                                                 'failed' => 'bg-red-50 text-red-700',
                                             ][$post->status] ?? 'bg-gray-50 text-gray-600';
                                         @endphp
@@ -54,6 +56,24 @@
                                         </span>
                                     </td>
                                     <td class="py-3 text-muted whitespace-nowrap">{{ $post->created_at->format('d/m/Y H:i') }}</td>
+                                    <td class="py-3">
+                                        @if($post->status === 'pending')
+                                            <form action="{{ route('posts.approve', $post) }}" method="POST" class="inline">
+                                                @csrf
+                                                <button type="submit" class="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full font-medium hover:bg-emerald-100">
+                                                    ✅ Approve
+                                                </button>
+                                            </form>
+                                            <form action="{{ route('posts.reject', $post) }}" method="POST" class="inline ml-1">
+                                                @csrf
+                                                <button type="submit" class="text-xs px-2.5 py-1 bg-red-50 text-red-700 rounded-full font-medium hover:bg-red-100">
+                                                    ❌ Reject
+                                                </button>
+                                            </form>
+                                        @else
+                                            <span class="text-muted text-xs">─</span>
+                                        @endif
+                                    </td>
                                 </tr>
                                 @endforeach
                             </tbody>

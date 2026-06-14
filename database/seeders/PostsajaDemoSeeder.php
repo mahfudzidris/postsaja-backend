@@ -13,7 +13,6 @@ class PostsajaDemoSeeder extends Seeder
             [
                 'id' => 1,
                 'business_name' => 'Bengkel Demo Khamis',
-                'owner_name' => 'Tokey Bengkel',
                 'business_code' => 'BENGKEL',
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -21,7 +20,6 @@ class PostsajaDemoSeeder extends Seeder
             [
                 'id' => 2,
                 'business_name' => 'Kedai Makan Demo',
-                'owner_name' => 'Tokey Makan',
                 'business_code' => 'MAKAN',
                 'created_at' => now(),
                 'updated_at' => now(),

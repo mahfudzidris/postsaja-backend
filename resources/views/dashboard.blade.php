@@ -47,6 +47,17 @@
                         <span class="text-2xl">👥</span>
                     </div>
                 </div>
+                @if($pendingApproval > 0)
+                <div class="bg-white border border-border rounded-xl p-5 border-amber-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-amber-600 font-medium">Pending Approval</p>
+                            <p class="text-2xl font-bold text-amber-600 mt-1">{{ $pendingApproval }}</p>
+                        </div>
+                        <span class="text-2xl">⏳</span>
+                    </div>
+                </div>
+                @endif
             </div>
 
             {{-- Quick Actions --}}

@@ -29,8 +29,9 @@
 
             @foreach($businesses as $business)
                 @php
-                    $waConfig = json_decode($business->ig_token ?? '{}', true);
-                    $isConnected = isset($waConfig['provider']);
+                    $waAccount = $business->socialAccount('whatsapp');
+                    $waConfig = $waAccount?->meta ?? [];
+                    $isConnected = !is_null($waAccount) && $waAccount->active;
                 @endphp
 
                 <div class="bg-white border border-border rounded-xl p-6 mb-4">

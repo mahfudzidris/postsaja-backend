@@ -23,9 +23,6 @@ class BusinessResource extends Resource
                 TextInput::make('business_name')
                     ->required()
                     ->maxLength(255),
-                TextInput::make('owner_name')
-                    ->required()
-                    ->maxLength(255),
                 TextInput::make('business_code')
                     ->required()
                     ->maxLength(20)
@@ -49,7 +46,8 @@ class BusinessResource extends Resource
                     ->searchable()
                     ->badge()
                     ->color('primary'),
-                TextColumn::make('owner_name')
+                TextColumn::make('users.name')
+                    ->label('Owners')
                     ->searchable(),
                 TextColumn::make('staff_count')
                     ->label('Staff')

@@ -16,6 +16,7 @@ class PostsajaPost extends Model
         'platforms_posted',
         'status',
         'analytics',
+        'approved_by',
     ];
 
     protected function casts(): array
@@ -29,5 +30,24 @@ class PostsajaPost extends Model
     public function business()
     {
         return $this->belongsTo(PostsajaBusiness::class, 'business_id');
+    }
+
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    // ─── Scopes ───
+
+    /** Posts waiting for supervisor approval */
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
+
+    /** Posts that have been posted */
+    public function scopePosted($query)
+    {
+        return $query->where('status', 'posted');
     }
 }

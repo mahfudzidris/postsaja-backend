@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\PostsajaPost;
-use App\Models\PostsajaBusiness;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -12,9 +11,7 @@ class PostController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $businessIds = PostsajaBusiness::where('owner_name', $user->name)
-            ->orWhereHas('staff', fn($q) => $q->where('telegram_chat_id', $user->telegram_chat_id ?? 0))
-            ->pluck('id');
+        $businessIds = $user->businesses()->pluck('id');
 
         $posts = PostsajaPost::whereIn('business_id', $businessIds)
             ->with('business')
@@ -22,5 +19,61 @@ class PostController extends Controller
             ->paginate(20);
 
         return view('posts.index', compact('posts'));
+    }
+
+    /**
+     * Approve a pending post (supervisor action)
+     */
+    public function approve(Request $request, PostsajaPost $post)
+    {
+        $user = Auth::user();
+
+        // Check if user is supervisor for this business
+        $isSupervisor = $user->businesses()
+            ->wherePivot('role', 'supervisor')
+            ->where('id', $post->business_id)
+            ->exists();
+
+        $isOwner = $user->businesses()
+            ->wherePivot('role', 'owner')
+            ->where('id', $post->business_id)
+            ->exists();
+
+        if (!$isSupervisor && !$isOwner) {
+            return back()->with('error', 'You are not authorized to approve posts.');
+        }
+
+        $post->update([
+            'status' => 'posted',
+            'approved_by' => $user->id,
+        ]);
+
+        return back()->with('success', '✅ Post approved and published!');
+    }
+
+    /**
+     * Reject a pending post
+     */
+    public function reject(Request $request, PostsajaPost $post)
+    {
+        $user = Auth::user();
+
+        $isSupervisor = $user->businesses()
+            ->wherePivot('role', 'supervisor')
+            ->where('id', $post->business_id)
+            ->exists();
+
+        $isOwner = $user->businesses()
+            ->wherePivot('role', 'owner')
+            ->where('id', $post->business_id)
+            ->exists();
+
+        if (!$isSupervisor && !$isOwner) {
+            return back()->with('error', 'Not authorized.');
+        }
+
+        $post->update(['status' => 'failed']);
+
+        return back()->with('success', 'Post rejected.');
     }
 }

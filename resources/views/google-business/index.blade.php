@@ -35,7 +35,7 @@
                             <p class="text-sm text-muted">Code: <code class="bg-primary-50 px-1.5 py-0.5 rounded font-mono text-primary-600">{{ $business->business_code }}</code></p>
                         </div>
                         <div class="text-right">
-                            @if($business->google_business_token)
+                            @if($business->hasGoogleBusiness())
                                 <span class="inline-flex items-center px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium">
                                     ✅ Connected
                                 </span>

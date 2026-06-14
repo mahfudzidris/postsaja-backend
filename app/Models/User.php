@@ -26,10 +26,35 @@ class User extends Authenticatable
         ];
     }
 
+    // ─── Business Relationships ───
+
+    /** All businesses this user is associated with (any role) */
     public function businesses()
     {
-        return $this->hasMany(PostsajaBusiness::class, 'owner_name', 'name');
+        return $this->belongsToMany(PostsajaBusiness::class, 'postsaja_business_user')
+            ->withPivot('role')
+            ->withTimestamps();
     }
+
+    /** Businesses where this user is owner */
+    public function ownedBusinesses()
+    {
+        return $this->businesses()->wherePivot('role', 'owner');
+    }
+
+    /** Businesses where this user is supervisor */
+    public function supervisedBusinesses()
+    {
+        return $this->businesses()->wherePivot('role', 'supervisor');
+    }
+
+    /** Businesses where this user is staff */
+    public function staffBusinesses()
+    {
+        return $this->businesses()->wherePivot('role', 'staff');
+    }
+
+    // ─── Filament Admin Access ───
 
     public function canAccessPanel(Panel $panel): bool
     {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PostsajaBusiness;
+use App\Models\PostsajaSocialAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -12,7 +13,7 @@ class GoogleBusinessController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $businesses = PostsajaBusiness::where('owner_name', $user->name)->get();
+        $businesses = $user->ownedBusinesses()->get();
 
         return view('google-business.index', compact('businesses'));
     }
@@ -60,7 +61,6 @@ class GoogleBusinessController extends Controller
         $clientSecret = config('services.google.client_secret');
         $redirectUri = route('google-business.callback');
 
-        // Exchange code for tokens
         try {
             $response = $this->httpPost('https://oauth2.googleapis.com/token', [
                 'code' => $code,
@@ -78,17 +78,22 @@ class GoogleBusinessController extends Controller
                     ->with('error', 'Gagal dapatkan access token. Cuba lagi.');
             }
 
-            // Store tokens
-            $business = PostsajaBusiness::find($businessId);
-            if ($business) {
-                $business->update([
-                    'google_business_token' => json_encode([
+            // Store token in social_accounts table
+            PostsajaSocialAccount::updateOrCreate(
+                [
+                    'business_id' => $businessId,
+                    'platform' => 'google_business',
+                ],
+                [
+                    'label' => 'Google Business',
+                    'token' => json_encode([
                         'access_token' => $data['access_token'],
                         'refresh_token' => $data['refresh_token'] ?? null,
                         'expires_at' => now()->addSeconds($data['expires_in'] ?? 3600),
                     ]),
-                ]);
-            }
+                    'active' => true,
+                ]
+            );
 
             return redirect()->route('google-business')
                 ->with('success', '✅ Google Business berjaya dipautkan!');
@@ -106,11 +111,10 @@ class GoogleBusinessController extends Controller
     public function disconnect(Request $request)
     {
         $businessId = $request->input('business_id');
-        $business = PostsajaBusiness::find($businessId);
 
-        if ($business) {
-            $business->update(['google_business_token' => null]);
-        }
+        PostsajaSocialAccount::where('business_id', $businessId)
+            ->where('platform', 'google_business')
+            ->delete();
 
         return back()->with('success', 'Google Business diputuskan.');
     }

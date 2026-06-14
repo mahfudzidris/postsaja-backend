@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PostsajaBusiness;
+use App\Models\PostsajaSocialAccount;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -12,7 +13,7 @@ class WhatsAppController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $businesses = PostsajaBusiness::where('owner_name', $user->name)->get();
+        $businesses = $user->ownedBusinesses()->get();
 
         return view('whatsapp.index', compact('businesses'));
     }
@@ -43,22 +44,23 @@ class WhatsAppController extends Controller
                 return back()->with('error', 'Gagal verify connection. Check API key & Phone ID.');
             }
 
-            // Save WhatsApp config to business
-            $business->update([
-                'owner_wa' => $validated['phone_number_id'],
-                // Store additional WhatsApp config in a separate field or JSON
-            ]);
-
-            // Store API config in a whatsapp_configs table or as JSON
-            // For now, we'll use a simple approach
-            $business->update([
-                'ig_token' => json_encode([  // Using ig_token as generic storage for now
-                    'provider' => $validated['provider'],
-                    'api_key' => $validated['api_key'],
-                    'phone_number_id' => $validated['phone_number_id'],
-                    'connected_at' => now()->toIso8601String(),
-                ]),
-            ]);
+            // Store WhatsApp config in social_accounts table
+            PostsajaSocialAccount::updateOrCreate(
+                [
+                    'business_id' => $validated['business_id'],
+                    'platform' => 'whatsapp',
+                ],
+                [
+                    'label' => 'WhatsApp Status',
+                    'meta' => [
+                        'provider' => $validated['provider'],
+                        'api_key' => $validated['api_key'],
+                        'phone_number_id' => $validated['phone_number_id'],
+                        'connected_at' => now()->toIso8601String(),
+                    ],
+                    'active' => true,
+                ]
+            );
 
             return back()->with('success', '✅ WhatsApp Status berjaya dipautkan!');
 
@@ -74,11 +76,10 @@ class WhatsAppController extends Controller
     public function disconnect(Request $request)
     {
         $businessId = $request->input('business_id');
-        $business = PostsajaBusiness::find($businessId);
 
-        if ($business) {
-            $business->update(['ig_token' => null]);
-        }
+        PostsajaSocialAccount::where('business_id', $businessId)
+            ->where('platform', 'whatsapp')
+            ->delete();
 
         return back()->with('success', 'WhatsApp diputuskan.');
     }
@@ -119,15 +120,16 @@ class WhatsAppController extends Controller
      */
     public static function sendStatusUpdate(string $businessId, string $imageUrl, string $caption): bool
     {
-        $business = PostsajaBusiness::find($businessId);
-        if (!$business || !$business->ig_token) {
+        $whatsapp = PostsajaSocialAccount::where('business_id', $businessId)
+            ->where('platform', 'whatsapp')
+            ->where('active', true)
+            ->first();
+
+        if (!$whatsapp || !$whatsapp->meta) {
             return false;
         }
 
-        $config = json_decode($business->ig_token, true);
-        if (!$config || !isset($config['provider'])) {
-            return false;
-        }
+        $config = $whatsapp->meta;
 
         try {
             $provider = $config['provider'];
@@ -138,7 +140,7 @@ class WhatsAppController extends Controller
                 '360dialog' => [
                     'messaging_product' => 'whatsapp',
                     'recipient_type' => 'individual',
-                    'to' => 'status',  // special for status
+                    'to' => 'status',
                     'type' => 'image',
                     'image' => ['link' => $imageUrl],
                 ],

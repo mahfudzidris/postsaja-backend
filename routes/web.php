@@ -37,6 +37,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Posts
     Route::get('/posts', [PostController::class, 'index'])->name('posts.index');
+    Route::post('/posts/{post}/approve', [PostController::class, 'approve'])->name('posts.approve');
+    Route::post('/posts/{post}/reject', [PostController::class, 'reject'])->name('posts.reject');
 
     // Google Business
     Route::get('/google-business', [GoogleBusinessController::class, 'index'])->name('google-business');

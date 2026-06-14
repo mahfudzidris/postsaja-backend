@@ -14,7 +14,6 @@ class TelegramWebhookController extends Controller
 {
     public function __invoke(Request $request)
     {
-        // Respond 200 ASAP — Laravel Cloud is fast, but let's be safe
         $update = $request->all();
 
         if (!isset($update['message']['chat']['id'])) {
@@ -28,25 +27,21 @@ class TelegramWebhookController extends Controller
         $username = $update['message']['from']['username'] ?? '';
 
         try {
-            // /start command
             if (str_starts_with($text, '/start')) {
                 $this->handleStart($chatId);
                 return response('', 200);
             }
 
-            // Text → Business Code registration
             if ($text && !$photo) {
                 $this->handleCode($chatId, $text, $username);
                 return response('', 200);
             }
 
-            // Photo → AI auto-post simulation
             if ($photo) {
                 $this->handlePhoto($chatId, $photo, $caption);
                 return response('', 200);
             }
 
-            // Fallback
             Telegram::sendMessage([
                 'chat_id' => $chatId,
                 'text' => "❌ Maaf, saya tak faham.\n\n📸 *Hantar gambar* → AI auto-post\n🔑 *Hantar Business Code* → Pautkan akaun\n/start → Lihat panduan",
@@ -96,6 +91,7 @@ class TelegramWebhookController extends Controller
             [
                 'business_id' => $business->id,
                 'telegram_username' => $username,
+                'role' => 'staff',
             ]
         );
 
@@ -105,7 +101,8 @@ class TelegramWebhookController extends Controller
                 . "Sekarang hantar gambar bila-bila — AI saya akan:\n"
                 . "1️⃣ Analyze gambar\n"
                 . "2️⃣ Generate caption + hashtags\n"
-                . "3️⃣ Auto-post ke Google Business, Facebook, Instagram, WhatsApp Status\n\n"
+                . "3️⃣ Hantar untuk approval supervisor\n"
+                . "4️⃣ Auto-post lepas approve!\n\n"
                 . "📸 *Cuba hantar gambar sekarang!*",
             'parse_mode' => 'Markdown',
         ]);
@@ -113,10 +110,8 @@ class TelegramWebhookController extends Controller
 
     private function handlePhoto(int $chatId, array $photos, string $caption): void
     {
-        // Get largest photo file_id
         $fileId = end($photos)['file_id'];
 
-        // Get file path from Telegram
         $response = Telegram::getFile(['file_id' => $fileId]);
         $filePath = $response->getFilePath();
         $token = config('telegram.bots.mybot.token');
@@ -129,6 +124,7 @@ class TelegramWebhookController extends Controller
             ->first();
 
         $businessName = $staff?->business?->business_name ?? 'Business anda';
+        $businessId = $staff?->business_id;
 
         // Acknowledge
         Telegram::sendMessage([
@@ -143,26 +139,26 @@ class TelegramWebhookController extends Controller
 
         $aiCaption = $result['caption'];
         $hashtags = $result['hashtags'];
-        $platforms = $result['platforms'] ?? ['google_business', 'facebook', 'instagram'];
-
-        $platformText = collect($platforms)->map(fn($p) => [
-            'google_business' => '📰 Google Business',
-            'facebook' => '📘 Facebook',
-            'instagram' => '📷 Instagram',
-            'whatsapp' => '💬 WhatsApp Status',
-        ][$p] ?? $p)->join("\n");
-
         $aiLabel = $result['success'] ? '🤖 *AI Caption:*' : '📝 *Caption:*';
+
+        // ─── Check if approval needed ───
+        $needsApproval = false;
+        if ($businessId) {
+            $hasSupervisor = \App\Models\PostsajaBusiness::find($businessId)
+                ?->supervisors()->exists() ?? false;
+            $needsApproval = $hasSupervisor;
+        }
+
+        $initialStatus = $needsApproval ? 'pending' : 'processing';
+        $statusText = $needsApproval
+            ? "⏳ Menunggu approval supervisor..."
+            : "🚀 Auto-post ke platform sosial!";
 
         $replyText = "✅ *Gambar diproses!*\n\n"
             . "{$aiLabel}\n"
             . "\"{$aiCaption}\"\n\n"
             . $hashtags . "\n\n"
-            . "📤 *Posting ke:*\n"
-            . $platformText . "\n\n"
-            . "📊 *Anggaran capaian:*\n"
-            . "👁️ 89 views · 👍 15 likes · 💬 2 respon\n\n"
-            . "🚀 Post akan naik dalam masa 5 minit!";
+            . "📤 *Status:* {$statusText}";
 
         Telegram::sendPhoto([
             'chat_id' => $chatId,
@@ -171,25 +167,27 @@ class TelegramWebhookController extends Controller
             'parse_mode' => 'Markdown',
         ]);
 
-        // Log post & trigger auto-post to WhatsApp Status
-        if ($staff && $staff->business_id) {
+        // ─── Log post ───
+        if ($businessId) {
             $post = PostsajaPost::create([
-                'business_id' => $staff->business_id,
+                'business_id' => $businessId,
                 'staff_chat_id' => $chatId,
                 'image_url' => $fullUrl,
                 'ai_caption' => $aiCaption,
-                'status' => 'processing',
+                'status' => $initialStatus,
             ]);
 
-            // Auto-post to WhatsApp Status if connected
-            try {
-                WhatsAppController::sendStatusUpdate($staff->business_id, $fullUrl, $aiCaption);
-                $post->update(['status' => 'posted']);
-            } catch (\Exception $e) {
-                Log::warning('WhatsApp auto-post failed (maybe not connected)', [
-                    'business_id' => $staff->business_id,
-                    'error' => $e->getMessage(),
-                ]);
+            // Auto-post only if no approval needed
+            if (!$needsApproval) {
+                try {
+                    WhatsAppController::sendStatusUpdate($businessId, $fullUrl, $aiCaption);
+                    $post->update(['status' => 'posted']);
+                } catch (\Exception $e) {
+                    Log::warning('WhatsApp auto-post failed (maybe not connected)', [
+                        'business_id' => $businessId,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
         }
     }
