@@ -39,27 +39,24 @@ class PlatformAuthController extends Controller
                 'id'          => 'instagram',
                 'name'        => 'Instagram',
                 'description' => 'Post images and videos to Instagram',
-                'auth_type'   => 'oauth',
-                'available'   => false,
-                'coming_soon' => true,
+                'auth_type'   => 'api_key',
+                'available'   => true,
                 'icon'        => 'instagram',
             ],
             [
                 'id'          => 'tiktok',
                 'name'        => 'TikTok',
                 'description' => 'Post videos to TikTok',
-                'auth_type'   => 'oauth',
-                'available'   => false,
-                'coming_soon' => true,
+                'auth_type'   => 'api_key',
+                'available'   => true,
                 'icon'        => 'tiktok',
             ],
             [
                 'id'          => 'facebook',
                 'name'        => 'Facebook',
                 'description' => 'Post to Facebook pages',
-                'auth_type'   => 'oauth',
-                'available'   => false,
-                'coming_soon' => true,
+                'auth_type'   => 'api_key',
+                'available'   => true,
                 'icon'        => 'facebook',
             ],
             [
@@ -135,11 +132,30 @@ class PlatformAuthController extends Controller
             ]);
         }
 
-        // For other platforms (coming soon)
+        // For other platforms: manual token entry (testing mode)
+        $validated = $request->validate([
+            'access_token' => 'required|string',
+            'meta'         => 'nullable|array',
+        ]);
+
+        $meta = $validated['meta'] ?? [];
+
+        $socialAccount = SocialAccount::updateOrCreate(
+            [
+                'user_id'  => $request->user()->id,
+                'platform' => $platform,
+            ],
+            [
+                'token'            => $validated['access_token'],
+                'provider_user_id' => $request->user()->email,
+                'meta'             => $meta,
+                'active'           => true,
+            ]
+        );
+
         return response()->json([
-            'message' => "{$platform} integration is coming soon. Token storage is ready.",
-            'auth_type' => 'oauth',
-            'coming_soon' => true,
+            'message'  => "{$platform} connected successfully.",
+            'platform' => $socialAccount,
         ]);
     }
 
