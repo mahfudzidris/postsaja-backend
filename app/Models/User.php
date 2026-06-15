@@ -3,65 +3,43 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
-use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Spatie\Permission\Traits\HasRoles;
+use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'phone', 'business_name', 'avatar', 'plan', 'google_id', 'facebook_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, Notifiable, HasApiTokens;
 
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'plan' => 'string',
         ];
     }
 
-    // ─── Business Relationships ───
+    // ─── Relationships ───
 
-    /** All businesses this user is associated with (any role) */
-    public function businesses()
+    public function posts()
     {
-        return $this->belongsToMany(PostsajaBusiness::class, 'postsaja_business_user')
-            ->withPivot('role')
-            ->withTimestamps();
+        return $this->hasMany(Post::class);
     }
 
-    /** Businesses where this user is owner */
-    public function ownedBusinesses()
+    public function notifications()
     {
-        return $this->businesses()->wherePivot('role', 'owner');
+        return $this->hasMany(Notification::class);
     }
 
-    /** Businesses where this user is supervisor */
-    public function supervisedBusinesses()
+    public function socialAccounts()
     {
-        return $this->businesses()->wherePivot('role', 'supervisor');
-    }
-
-    /** Businesses where this user is staff */
-    public function staffBusinesses()
-    {
-        return $this->businesses()->wherePivot('role', 'staff');
-    }
-
-    // ─── Filament Admin Access ───
-
-    public function canAccessPanel(Panel $panel): bool
-    {
-        if ($panel->getId() === 'admin') {
-            return $this->hasRole('admin');
-        }
-
-        return true;
+        return $this->hasMany(SocialAccount::class);
     }
 }
