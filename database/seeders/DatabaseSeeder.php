@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Notification;
+use App\Models\Plan;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -14,6 +15,64 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
+        // ─── Seed Plans ───
+
+        $plans = [
+            [
+                'name' => 'Free',
+                'code' => 'free',
+                'price' => 0,
+                'currency' => 'MYR',
+                'max_channels' => 2,
+                'max_posts_per_month' => 10,
+                'features' => [
+                    'Up to 10 posts per month',
+                    'Up to 2 social channels',
+                    'Basic analytics',
+                ],
+                'active' => true,
+            ],
+            [
+                'name' => 'Basic',
+                'code' => 'basic',
+                'price' => 29,
+                'currency' => 'MYR',
+                'max_channels' => 3,
+                'max_posts_per_month' => 50,
+                'features' => [
+                    'Up to 50 posts per month',
+                    'Up to 3 social channels',
+                    'Advanced analytics',
+                    'Schedule posts',
+                ],
+                'active' => true,
+            ],
+            [
+                'name' => 'Pro',
+                'code' => 'pro',
+                'price' => 49,
+                'currency' => 'MYR',
+                'max_channels' => 10,
+                'max_posts_per_month' => 9999,
+                'features' => [
+                    'Unlimited posts',
+                    'Up to 10 social channels',
+                    'Advanced analytics',
+                    'Schedule posts',
+                    'Priority support',
+                    'Team collaboration (coming soon)',
+                ],
+                'active' => true,
+            ],
+        ];
+
+        foreach ($plans as $planData) {
+            Plan::firstOrCreate(
+                ['code' => $planData['code']],
+                $planData
+            );
+        }
+
         // 1 demo user
         $user = User::create([
             'name' => 'Demo User',
