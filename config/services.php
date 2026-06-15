@@ -41,4 +41,24 @@ return [
         'token' => env('GITHUB_TOKEN'),
         'repo' => env('GITHUB_REPO', 'mahfudzidris/postsaja-backend'),
     ],
+    // Social Media Platforms
+    'facebook' => [
+        'client_id' => env('FACEBOOK_CLIENT_ID'),
+        'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
+    ],
+
+    'instagram' => [
+        'client_id' => env('FACEBOOK_CLIENT_ID'), // Facebook App ID (same as Facebook)
+        'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
+    ],
+
+    'tiktok' => [
+        'client_key' => env('TIKTOK_CLIENT_KEY'),
+        'client_secret' => env('TIKTOK_CLIENT_SECRET'),
+    ],
+
+    'twitter' => [
+        'client_id' => env('TWITTER_CLIENT_ID'),
+        'client_secret' => env('TWITTER_CLIENT_SECRET'),
+    ],
 ];

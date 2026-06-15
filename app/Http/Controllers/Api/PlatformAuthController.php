@@ -133,7 +133,9 @@ class PlatformAuthController extends Controller
         }
 
         // For Facebook / Instagram / TikTok: generate OAuth URL if credentials configured
-        $clientId = config("services.{$platform}.client_id");
+        // TikTok uses client_key instead of client_id
+        $clientIdField = $platform === 'tiktok' ? 'client_key' : 'client_id';
+        $clientId = config("services.{$platform}.{$clientIdField}");
         $clientSecret = config("services.{$platform}.client_secret");
 
         if ($clientId && $clientSecret) {
@@ -317,7 +319,8 @@ class PlatformAuthController extends Controller
             }
 
             // OAuth code exchange via Facebook Graph API
-            $clientId = config("services.{$platform}.client_id");
+            $clientIdField = $platform === 'tiktok' ? 'client_key' : 'client_id';
+            $clientId = config("services.{$platform}.{$clientIdField}");
             $clientSecret = config("services.{$platform}.client_secret");
 
             if (!$clientId || !$clientSecret) {
