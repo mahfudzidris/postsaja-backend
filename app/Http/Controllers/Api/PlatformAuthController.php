@@ -132,30 +132,41 @@ class PlatformAuthController extends Controller
             ]);
         }
 
-        // For other platforms: manual token entry (testing mode)
-        $validated = $request->validate([
-            'access_token' => 'required|string',
-            'meta'         => 'nullable|array',
-        ]);
+        // For Facebook / Instagram / TikTok: generate OAuth URL if credentials configured
+        $clientId = config("services.{$platform}.client_id");
+        $clientSecret = config("services.{$platform}.client_secret");
 
-        $meta = $validated['meta'] ?? [];
+        if ($clientId && $clientSecret) {
+            $redirectUri = route('platform.callback', ['platform' => $platform]);
+            $scopes = $this->getOAuthScopes($platform);
+            $state = bin2hex(random_bytes(16));
 
-        $socialAccount = SocialAccount::updateOrCreate(
-            [
-                'user_id'  => $request->user()->id,
-                'platform' => $platform,
-            ],
-            [
-                'token'            => $validated['access_token'],
-                'provider_user_id' => $request->user()->email,
-                'meta'             => $meta,
-                'active'           => true,
-            ]
-        );
+            $request->session()->put("oauth_state_{$platform}", $state);
 
+            // Facebook OAuth handles both Facebook & Instagram
+            $authUrl = "https://www.facebook.com/v22.0/dialog/oauth?"
+                . http_build_query([
+                    'client_id'    => $clientId,
+                    'redirect_uri' => $redirectUri,
+                    'state'        => $state,
+                    'scope'        => implode(',', $scopes),
+                    'response_type'=> 'code',
+                ]);
+
+            return response()->json([
+                'auth_type'   => 'oauth',
+                'redirect_url' => $authUrl,
+            ]);
+        }
+
+        // Fallback: manual token entry (for testing when no OAuth credentials)
         return response()->json([
-            'message'  => "{$platform} connected successfully.",
-            'platform' => $socialAccount,
+            'message'   => "Enter your {$platform} access token.",
+            'auth_type' => 'api_key',
+            'requires'  => [
+                'access_token' => "Your {$platform} API access token",
+                'meta'         => 'Optional metadata (page_id, account_id, etc.)',
+            ],
         ]);
     }
 
@@ -163,6 +174,18 @@ class PlatformAuthController extends Controller
      * Handle OAuth callback for a platform.
      * For Telegram, store the API key directly.
      */
+    protected function getOAuthScopes(string $platform): array
+    {
+        return match ($platform) {
+            'facebook' => ['pages_manage_posts', 'pages_read_engagement', 'pages_show_list'],
+            'instagram' => ['instagram_basic', 'instagram_content_publish', 'pages_show_list', 'pages_manage_posts'],
+            'tiktok' => ['user.info.basic', 'video.publish', 'video.upload'],
+            'twitter' => ['tweet.read', 'tweet.write', 'users.read'],
+            'google_business' => ['https://www.googleapis.com/auth/business.manage'],
+            default => [],
+        };
+    }
+
     public function callback(Request $request, string $platform): JsonResponse
     {
         // ── Telegram: store bot token + chat_id ──
@@ -263,6 +286,146 @@ class PlatformAuthController extends Controller
                     'message' => 'Google authentication failed: ' . $e->getMessage(),
                 ], 422);
             }
+        }
+
+        // For Facebook / Instagram / TikTok: handle OAuth code or manual token
+        if (in_array($platform, ['facebook', 'instagram', 'tiktok', 'twitter'])) {
+            $code = $request->input('code');
+            $accessToken = $request->input('access_token');
+
+            // If no code or access_token provided, return error
+            if (!$code && !$accessToken) {
+                return response()->json(['message' => 'OAuth code or access_token is required.'], 422);
+            }
+
+            // Manual token entry (for testing)
+            if ($accessToken) {
+                $meta = $request->input('meta', []);
+                $socialAccount = SocialAccount::updateOrCreate(
+                    ['user_id' => $request->user()->id, 'platform' => $platform],
+                    [
+                        'token'            => $accessToken,
+                        'provider_user_id' => $request->user()->email,
+                        'meta'             => $meta,
+                        'active'           => true,
+                    ]
+                );
+                return response()->json([
+                    'message'  => "{$platform} connected successfully.",
+                    'platform' => $socialAccount,
+                ]);
+            }
+
+            // OAuth code exchange via Facebook Graph API
+            $clientId = config("services.{$platform}.client_id");
+            $clientSecret = config("services.{$platform}.client_secret");
+
+            if (!$clientId || !$clientSecret) {
+                return response()->json(['message' => "{$platform} OAuth not configured. Use access_token manually."], 422);
+            }
+
+            $redirectUri = route('platform.callback', ['platform' => $platform]);
+
+            $tokenUrl = "https://graph.facebook.com/v22.0/oauth/access_token?"
+                . http_build_query([
+                    'client_id'     => $clientId,
+                    'client_secret' => $clientSecret,
+                    'redirect_uri'  => $redirectUri,
+                    'code'          => $code,
+                ]);
+
+            $fbResponse = \Illuminate\Support\Facades\Http::get($tokenUrl);
+
+            if (!$fbResponse->successful()) {
+                return response()->json([
+                    'message' => 'Failed to exchange OAuth code: ' . ($fbResponse->json('error.message') ?? 'Unknown error'),
+                ], 422);
+            }
+
+            $tokenData = $fbResponse->json();
+            $finalToken = $tokenData['access_token'] ?? null;
+
+            if (!$finalToken) {
+                return response()->json(['message' => 'No access token received.'], 422);
+            }
+
+            // Exchange for long-lived token
+            $longUrl = "https://graph.facebook.com/v22.0/oauth/access_token?"
+                . http_build_query([
+                    'grant_type'        => 'fb_exchange_token',
+                    'client_id'         => $clientId,
+                    'client_secret'     => $clientSecret,
+                    'fb_exchange_token' => $finalToken,
+                ]);
+
+            $longResponse = \Illuminate\Support\Facades\Http::get($longUrl);
+            if ($longResponse->successful()) {
+                $longData = $longResponse->json();
+                $finalToken = $longData['access_token'] ?? $finalToken;
+            }
+
+            // Get user's pages for Facebook
+            $pages = [];
+            $pagesUrl = "https://graph.facebook.com/v22.0/me/accounts?access_token={$finalToken}";
+            $pagesResponse = \Illuminate\Support\Facades\Http::get($pagesUrl);
+            if ($pagesResponse->successful()) {
+                $pages = $pagesResponse->json('data') ?? [];
+            }
+
+            // Get user profile
+            $profileUrl = "https://graph.facebook.com/v22.0/me?fields=id,name,email&access_token={$finalToken}";
+            $profileResponse = \Illuminate\Support\Facades\Http::get($profileUrl);
+            $profile = $profileResponse->successful() ? $profileResponse->json() : [];
+
+            $socialAccount = SocialAccount::updateOrCreate(
+                ['user_id' => $request->user()->id, 'platform' => $platform],
+                [
+                    'token'            => $finalToken,
+                    'provider_user_id' => $profile['id'] ?? $request->user()->email,
+                    'meta'             => [
+                        'profile'      => $profile,
+                        'pages'        => $pages,
+                        'page_id'      => $pages[0]['id'] ?? null,
+                        'page_name'    => $pages[0]['name'] ?? null,
+                        'page_token'   => $pages[0]['access_token'] ?? null,
+                        'expires_in'   => $tokenData['expires_in'] ?? null,
+                    ],
+                    'active'           => true,
+                ]
+            );
+
+            // For OAuth popup callbacks, return HTML that closes the popup
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'message'  => "{$platform} connected successfully.",
+                    'platform' => $socialAccount,
+                ]);
+            }
+
+            // Return HTML page that closes popup or redirects back to app
+            $appUrl = config('app.frontend_url', 'http://localhost:8081');
+            $platformName = ucfirst($platform);
+
+            return response("
+                <html>
+                <head><title>Connected</title></head>
+                <body>
+                    <script>
+                        try {
+                            if (window.opener) {
+                                window.opener.postMessage({type: 'social_connected', platform: '{$platform}'}, '{$appUrl}');
+                                window.close();
+                            } else {
+                                window.location.href = '{$appUrl}/settings';
+                            }
+                        } catch(e) {
+                            window.location.href = '{$appUrl}/settings';
+                        }
+                    </script>
+                    <p>{$platformName} connected! You can close this window.</p>
+                </body>
+                </html>
+            ")->header('Content-Type', 'text/html');
         }
 
         return response()->json(['message' => "{$platform} callback not implemented yet."], 501);
